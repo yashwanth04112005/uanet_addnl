@@ -1,3 +1,11 @@
+import collections
+import collections.abc
+for _attr in ['MutableMapping', 'Mapping', 'Sequence', 'Iterable', 'Callable', 'Container']:
+    if not hasattr(collections, _attr):
+        setattr(collections, _attr, getattr(collections.abc, _attr))
+
+import os
+import torch
 from torch.utils.data import DataLoader
 from geoseg.losses import *
 import torch.nn as nn
@@ -7,10 +15,10 @@ from catalyst.contrib.nn import Lookahead
 from catalyst import utils
 
 # training hparam
-max_epoch = 105
+max_epoch = 3
 ignore_index = 255
-train_batch_size = 12
-val_batch_size = 12
+train_batch_size = 2
+val_batch_size = 2
 lr = 1e-3
 weight_decay = 0.0025
 backbone_lr = 1e-3
@@ -28,34 +36,34 @@ monitor_mode = 'max'
 save_top_k = 1
 save_last = True
 check_val_every_n_epoch = 1
-gpus = [0]
+gpus = [0] if torch.cuda.is_available() else 1
 strategy = None
-pretrained_ckpt_path = 'model_weights/whubuilding/UANet_VGG/UANet_VGG.ckpt'
+pretrained_ckpt_path = None
 resume_ckpt_path = None
-#  define the network
-net = UANet_VGG(channel=32,num_classes=num_classes)
+
+# define the network
+net = UANet_VGG(channel=32, num_classes=num_classes)
 # define the loss
 loss = nn.CrossEntropyLoss()
 use_aux_loss = False
 
 # define the dataloader
-
-train_dataset = WHUBuildingDataset(data_root='/home/henry/Code/Building_ISPRS/data/whubuilding/train', mode='train', mosaic_ratio=0.25, transform=train_aug)
-val_dataset = WHUBuildingDataset(data_root='/home/henry/Code/Building_ISPRS/data/whubuilding/val', mode='val', transform=val_aug)
-test_dataset = WHUBuildingDataset(data_root='/home/henry/Code/Building_ISPRS/data/whubuilding/test', mode='val', transform=val_aug)
+train_dataset = WHUBuildingDataset(data_root='data/whubuilding/train', mode='train', mosaic_ratio=0.25, transform=train_aug)
+val_dataset = WHUBuildingDataset(data_root='data/whubuilding/val', mode='val', transform=val_aug)
+test_dataset = WHUBuildingDataset(data_root='data/whubuilding/test', mode='val', transform=val_aug)
 
 train_loader = DataLoader(dataset=train_dataset,
                           batch_size=train_batch_size,
-                          num_workers=4,
-                          pin_memory=True,
+                          num_workers=0,
+                          pin_memory=torch.cuda.is_available(),
                           shuffle=True,
                           drop_last=True)
 
 val_loader = DataLoader(dataset=val_dataset,
                         batch_size=val_batch_size,
-                        num_workers=4,
+                        num_workers=0,
                         shuffle=False,
-                        pin_memory=True,
+                        pin_memory=torch.cuda.is_available(),
                         drop_last=False)
 
 # define the optimizer
@@ -64,3 +72,4 @@ net_params = utils.process_model_params(net, layerwise_params=layerwise_params)
 base_optimizer = torch.optim.AdamW(net_params, lr=lr, weight_decay=weight_decay)
 optimizer = Lookahead(base_optimizer)
 lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=15, T_mult=2)
+

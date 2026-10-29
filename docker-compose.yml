@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  uanet-web:
+    build: .
+    container_name: uanet-web-demo
+    ports:
+      - "8501:8501"
+    restart: unless-stopped
+    volumes:
+      - ./evaluation_results:/app/evaluation_results:ro
+      - ./model_weights:/app/model_weights:ro
+

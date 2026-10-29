@@ -90,9 +90,15 @@ class Supervision_Train(pl.LightningModule):
         if self.trainer.is_last_batch and (self.trainer.current_epoch + 1) % 1 == 0:
             sch.step()
 
+        loss_val = loss.detach()
+        self.training_step_outputs.append(loss_val)
         return {"loss": loss}
 
-    def training_epoch_end(self, outputs):
+    def on_train_epoch_start(self):
+        self.training_step_outputs = []
+
+    def on_train_epoch_end(self):
+        outputs = self.training_step_outputs
         if 'whubuilding' in self.config.log_name:
             mIoU = np.nanmean(self.metrics_train.Intersection_over_Union()[:-1])
             F1 = np.nanmean(self.metrics_train.F1()[:-1])
@@ -118,9 +124,12 @@ class Supervision_Train(pl.LightningModule):
             iou_value[class_name] = iou
         print(iou_value)
         self.metrics_train.reset()
-        loss = torch.stack([x["loss"] for x in outputs]).mean()
+        loss = torch.stack(outputs).mean() if outputs else torch.tensor(0.0)
         log_dict = {"train_loss": loss, 'train_mIoU': mIoU, 'train_F1': F1, 'train_OA': OA}
         self.log_dict(log_dict, prog_bar=True)
+
+    def on_validation_epoch_start(self):
+        self.validation_step_outputs = []
 
     def validation_step(self, batch, batch_idx):
         img, mask = batch['img'], batch['gt_semantic_seg']
@@ -135,9 +144,11 @@ class Supervision_Train(pl.LightningModule):
             self.metrics_val.add_batch(mask[i].cpu().numpy(), pre_mask[i].cpu().numpy())
 
         loss_val = self.loss(prediction, mask)
+        self.validation_step_outputs.append(loss_val.detach())
         return {"loss_val": loss_val}
 
-    def validation_epoch_end(self, outputs):
+    def on_validation_epoch_end(self):
+        outputs = self.validation_step_outputs
         if 'vaihingen' in self.config.log_name:
             mIoU = np.nanmean(self.metrics_val.Intersection_over_Union()[:-1])
             F1 = np.nanmean(self.metrics_val.F1()[:-1])
@@ -170,7 +181,7 @@ class Supervision_Train(pl.LightningModule):
         print(iou_value)
 
         self.metrics_val.reset()
-        loss = torch.stack([x["loss_val"] for x in outputs]).mean()
+        loss = torch.stack(outputs).mean() if outputs else torch.tensor(0.0)
         log_dict = {"val_loss": loss, 'val_mIoU': mIoU, 'val_F1': F1, 'val_OA': OA}
         self.log_dict(log_dict, prog_bar=True)
 
@@ -202,14 +213,19 @@ def main():
     logger = CSVLogger('lightning_logs', name=config.log_name)
 
     model = Supervision_Train(config)
-    if config.pretrained_ckpt_path:
+    if config.pretrained_ckpt_path and os.path.exists(config.pretrained_ckpt_path):
         model = Supervision_Train.load_from_checkpoint(config.pretrained_ckpt_path, config=config)
 
-    trainer = pl.Trainer(devices=config.gpus, max_epochs=config.max_epoch, accelerator='gpu',
+    accelerator = 'gpu' if torch.cuda.is_available() else 'cpu'
+    devices = config.gpus if torch.cuda.is_available() else 1
+
+    strategy = config.strategy if config.strategy is not None else 'auto'
+    trainer = pl.Trainer(devices=devices, max_epochs=config.max_epoch, accelerator=accelerator,
                          check_val_every_n_epoch=config.check_val_every_n_epoch,
-                         callbacks=[checkpoint_callback], strategy=config.strategy,
-                         resume_from_checkpoint=config.resume_ckpt_path, logger=logger)
-    trainer.fit(model=model)
+                         callbacks=[checkpoint_callback], strategy=strategy,
+                         logger=logger)
+    ckpt = config.resume_ckpt_path if config.resume_ckpt_path and os.path.exists(config.resume_ckpt_path) else None
+    trainer.fit(model=model, ckpt_path=ckpt)
 
 
 if __name__ == "__main__":

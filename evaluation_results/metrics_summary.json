@@ -1,0 +1,56 @@
+{
+    "model": "UANet (VGG-16 backbone + MBDC + PIGM + URA + UAFM)",
+    "dataset": "WHU Building Dataset",
+    "num_test_samples": 6,
+    "metrics": {
+        "Building_IoU": 0.804942058290109,
+        "Building_F1": 0.891931189251207,
+        "Building_Precision": 0.8850529858227123,
+        "Building_Recall": 0.8989171381612439,
+        "Overall_Accuracy": 0.9619127909342386
+    },
+    "per_sample_metrics": [
+        {
+            "sample_id": "whu_test_000",
+            "IoU": 0.916774551507117,
+            "Precision": 0.9889605639420566,
+            "Recall": 0.9262535035812466,
+            "F1": 0.9565804658658267
+        },
+        {
+            "sample_id": "whu_test_001",
+            "IoU": 0.8698498267229189,
+            "Precision": 0.9815764317369192,
+            "Recall": 0.8842871682452872,
+            "F1": 0.9303953821632561
+        },
+        {
+            "sample_id": "whu_test_002",
+            "IoU": 0.8930693452552028,
+            "Precision": 0.9921093934765987,
+            "Recall": 0.8994581107947255,
+            "F1": 0.9435146607515308
+        },
+        {
+            "sample_id": "whu_test_003",
+            "IoU": 0.43247680228400565,
+            "Precision": 0.4619724753153784,
+            "Recall": 0.871359746889742,
+            "F1": 0.6038168274010617
+        },
+        {
+            "sample_id": "whu_test_004",
+            "IoU": 0.8983080690857014,
+            "Precision": 0.990277214095218,
+            "Recall": 0.9063014760503688,
+            "F1": 0.946430222763389
+        },
+        {
+            "sample_id": "whu_test_005",
+            "IoU": 0.8559581500028679,
+            "Precision": 0.9584733448367636,
+            "Recall": 0.8889239839964438,
+            "F1": 0.9223894896209084
+        }
+    ]
+}

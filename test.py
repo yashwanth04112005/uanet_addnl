@@ -50,9 +50,18 @@ def main():
     config = py2cfg(args.config_path)
     args.output_path.mkdir(exist_ok=True, parents=True)
 
-    model = Supervision_Train.load_from_checkpoint(
-        os.path.join(config.weights_path, config.test_weights_name + '.ckpt'), config=config)
-    model.cuda()
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    ckpt_file = os.path.join(config.weights_path, config.test_weights_name + '.ckpt')
+    if not os.path.exists(ckpt_file):
+        # Fall back to best checkpoint in dir if exact name differs
+        ckpt_files = [os.path.join(config.weights_path, f) for f in os.listdir(config.weights_path) if f.endswith('.ckpt')]
+        if ckpt_files:
+            ckpt_file = ckpt_files[0]
+        else:
+            raise FileNotFoundError(f"No checkpoint found in {config.weights_path}")
+
+    model = Supervision_Train.load_from_checkpoint(ckpt_file, config=config)
+    model.to(device)
     model.eval()
     evaluator = Evaluator(num_class=config.num_classes)
     evaluator.reset()
@@ -79,35 +88,33 @@ def main():
     with torch.no_grad():
         test_loader = DataLoader(
             test_dataset,
-            batch_size=16,
-            num_workers=4,
-            pin_memory=True,
+            batch_size=min(4, len(test_dataset)),
+            num_workers=0,
+            pin_memory=torch.cuda.is_available(),
             drop_last=False,
         )
         results = []
         for input in tqdm(test_loader):
             # raw_prediction NxCxHxW
-            raw_predictions = model(input['img'].cuda())
+            raw_predictions = model(input['img'].to(device))
             image_ids = input["img_id"]
             if 'gt_semantic_seg' in input.keys():
                 masks_true = input['gt_semantic_seg']
             
             raw_predictions = nn.Softmax(dim=1)(raw_predictions)
-            # input_images['features'] NxCxHxW C=3
             predictions = raw_predictions.argmax(dim=1)
-            # print('preds shape', predictions[0,:,:])
 
             for i in range(raw_predictions.shape[0]):
                 raw_mask = predictions[i].cpu().numpy()
                 mask = raw_mask
 
-                # print(mask.shape)
                 if 'gt_semantic_seg' in input.keys():
                     evaluator.add_batch(pre_image=mask, gt_image=masks_true[i].cpu().numpy())
                 mask_name = image_ids[i]
                 results.append((mask, str(args.output_path / mask_name), args.rgb))
     t0 = time.time()
-    mpp.Pool(processes=mp.cpu_count()).map(img_writer, results)
+    for item in results:
+        img_writer(item)
     t1 = time.time()
     img_write_time = t1 - t0
     print('images writing spends: {} s'.format(img_write_time))

@@ -1,0 +1,20 @@
+
+========================================================================================
+                  UANET QUANTITATIVE EVALUATION BENCHMARK REPORT
+========================================================================================
+ Model Architecture : UANet (VGG-16 BN Backbone + Multi-scale MBDC + PIGM + UAFM)
+ Target Dataset     : WHU Building Footprint Segmentation
+ Evaluated Samples  : 6 test image tiles (512x512)
+ Multi-Level Stages : M5 (FPN) -> M4 -> M3 -> M2 -> M1 (Final Refinement)
+ Device Used        : cpu
+----------------------------------------------------------------------------------------
+ METRIC                    | VALUE (%)      | RAW SCORE
+----------------------------------------------------------------------------------------
+ IoU (Intersection over U) |  80.49%        | 0.8049
+ F1-Score (Dice)           |  89.19%        | 0.8919
+ Precision                 |  88.51%        | 0.8851
+ Recall                    |  89.89%        | 0.8989
+ Overall Accuracy (OA)     |  96.19%        | 0.9619
+========================================================================================
+ Visualizations Saved to   : D:\UAnet_addnal\evaluation_results
+========================================================================================

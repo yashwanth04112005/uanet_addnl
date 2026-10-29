@@ -1,9 +1,18 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .pvtv2 import *
-from .Res2Net_v1b import *
-from .resnet import resnet50
+try:
+    from .pvtv2 import *
+except Exception:
+    pass
+try:
+    from .Res2Net_v1b import *
+except Exception:
+    pass
+try:
+    from .resnet import resnet50
+except Exception:
+    pass
 import numpy as np
 from torchvision import models
 import warnings

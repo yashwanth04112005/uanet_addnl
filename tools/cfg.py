@@ -1,5 +1,11 @@
 import pydoc
 import sys
+import collections
+import collections.abc
+for _attr in ['MutableMapping', 'Mapping', 'Sequence', 'Iterable', 'Callable', 'Container']:
+    if not hasattr(collections, _attr):
+        setattr(collections, _attr, getattr(collections.abc, _attr))
+
 from importlib import import_module
 from pathlib import Path
 from typing import Union
